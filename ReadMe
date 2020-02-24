@@ -1,0 +1,41 @@
+CRUCERU VLAD 325CA
+
+Mesajele afisate de server sunt: 
+	-in cazul in care un utilizator se conecteaza pentru prima data ->  New Client (id) connected from ... 
+	-in cazul in care un utilizator ce s-a mai conectat si inainte se conecteaza din nou ->  Client (id) reconnected from ...
+	-in cazul in care un utilizator se deconecteaza -> Client (id) disconnected
+	-alte mesaje de eroare
+
+Mesajele afisate de subscriber sunt:
+	-subscribed topic/ unsubscribed topic
+	-mesaje de eroare daca comanda de subscribe sau unsubscribe e introdusa necorespunzator
+
+De retinut ca daca de exemplu dau subscribe pe un topic cu SF=1 si apoi dau subscribe pe acelasi topic cu SF=0 nu se va primi vreun mesaj de eroare, ci se va actualiza optiunea utilizatorului pe topicul respectiv. De asemenea daca se da unsubscribe pe un topic pe care nu a dat subscribe nu se va intampla nimic(serverul va cauta clientul in lista abonatilor la topicul respectiv, daca il gaseste il sterge, daca nu, inseamna ca era oricum dezabonat).
+
+Mi-am creat 3 clase:
+Clasa User contine: -id-ul userului
+	            -socket-ul prin care serverul comunica cu clientul
+		    -un bool care arata daca este online sau nu
+		    -o coada in care retin mesajele ce ar trebui trimise la reconectare
+Clasa Topic contine: -numele topicului
+		     -o lista cu useri ce au dat subscribe de forma Pair<User,optiunea SF>
+Clasa Forum contine: -o lista cu obiecte Topic
+		     -o lista cu obiecte User, care retine utilizatorii care sunt inregistrati pe forum.(daca un utilizator se delogheaza nu e sters din lista)
+
+Mi-am mai creat si 3 structuri de mesaj: o structura prin care se primesc mesaje de la clientii udp, o structura prin care trimit mesaje de la server la clientii tcp si o structura prin care trimit mesaje de la clientii tcp la server(alea cu subscribe/unsubscribe). 
+
+Cum functioneaza:
+Am un socket UDP pentru mesaje de la clienti UDP si un socket TCP pe care ascult conexiuni.
+Daca: 
+	-vine o cerere de conectare de la un user, updatez lista cu useri, ceea ce presupune verificarea daca id-ul userului este deja in lista cu utilizatori ai forumului. Daca nu, inseamna ca se conecteaza pt prima data si il adaug. Daca da, actualizez socketul userului prin care se comunica,setez starea userului ca fiind online, si trimit mesajele din coada de asteptare(inbox) userului.  Se va afisa in final "New client connected " sau "Client reconnected" in functie de ce returneaza functia de update a utilizatorilor.
+
+ 	-vine un mesaj de la un client UDP, citesc mesajul si il prelucrez. Se va cauta in lista de topicuri al forumului topicul cu pricina si daca exista se va verifica la fiecare utilizator din lista de subscriberi variabila SF si daca este online. Daca e online trimite mesajul, daca e offline si SF=1 ii face pushBack in coada de asteptare(inbox), altfel nu trimite.
+
+	-vine un mesaj de la un client TCP, citesc mesajul. Daca e gol, inseamna ca s-a inchis conexiunea si voi actualiza starea userului care comunica pe socketul respectiv ca fiind offline si de asemenea socketul respectiv se va actualiza cu -1. Daca nu este gol inseamna ca a venit o cerere de subscribe/unsubscribe de la un utliziator. Se cauta topicul in lista de topicuri ale forumului. 
+		a) Cerere de subscribe: Daca nu exista se creeaza, daca exista se cauta utilizatorul in lista de subscriberi. Daca nu exista se adauga, daca exista doar se actualizeaza SF.
+		b) Cerere de unsubscribe: Daca nu exista, nu fac nimic, daca exista se cauta utilizatorul in lista se subscriberi. Daca nu exista nu fac nimic, daca exista il sterg.
+	
+
+La clientul TCP, daca primesc input de la tastatura prelucrez inputul si trimit la server mesajul de subscr, unsubscr. Daca primesc mesaj de la server, il citesc si il afisez. 
+
+
